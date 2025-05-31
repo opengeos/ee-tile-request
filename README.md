@@ -4,6 +4,7 @@ emoji: 😻
 colorFrom: pink
 colorTo: gray
 sdk: docker
+app_port: 7860
 pinned: false
 license: mit
 short_description: Earth Engine Tile URL Generator
