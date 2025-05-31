@@ -1,4 +1,4 @@
 fastapi
-uvicorn
-gradio
 git+https://github.com/gee-community/geemap.git
+gradio
+uvicorn
