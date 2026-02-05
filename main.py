@@ -19,7 +19,7 @@ except Exception as e:
 
 
 # ---- Shared Tile Logic ----
-def get_tile(asset_id, vis_params=None):
+def get_tile(asset_id, vis_params=None, start_date=None, end_date=None, bbox=None):
     try:
         if asset_id.startswith("ee."):
             ee_object = eval(asset_id)
@@ -34,6 +34,38 @@ def get_tile(asset_id, vis_params=None):
                 ee_object = ee.FeatureCollection(asset_id)
             else:
                 raise ValueError(f"Unsupported data type: {data_type}")
+
+        # Apply date range filtering for ImageCollections
+        if start_date or end_date:
+            if isinstance(ee_object, ee.ImageCollection):
+                if start_date and end_date:
+                    ee_object = ee_object.filterDate(start_date, end_date)
+                elif start_date:
+                    ee_object = ee_object.filterDate(start_date, "2100-01-01")
+                elif end_date:
+                    ee_object = ee_object.filterDate("1970-01-01", end_date)
+            else:
+                raise ValueError(
+                    "Date filtering is only supported for ImageCollections"
+                )
+
+        # Apply bounding box filtering
+        if bbox:
+            if len(bbox) != 4:
+                raise ValueError(
+                    "bbox must be a list of 4 values: [west, south, east, north]"
+                )
+            geometry = ee.Geometry.BBox(*bbox)
+            if isinstance(ee_object, ee.ImageCollection):
+                ee_object = ee_object.filterBounds(geometry)
+            elif isinstance(ee_object, ee.FeatureCollection):
+                ee_object = ee_object.filterBounds(geometry)
+            elif isinstance(ee_object, ee.Image):
+                ee_object = ee_object.clip(geometry)
+            else:
+                raise ValueError(
+                    f"Bounding box filtering not supported for {type(ee_object)}"
+                )
 
         if vis_params is None:
             vis_params = {}
@@ -68,11 +100,16 @@ app.add_middleware(
 class TileRequest(BaseModel):
     asset_id: str
     vis_params: dict | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    bbox: list[float] | None = None  # [west, south, east, north]
 
 
 @app.post("/tile")
 def get_tile_api(req: TileRequest):
-    result = get_tile(req.asset_id, req.vis_params)
+    result = get_tile(
+        req.asset_id, req.vis_params, req.start_date, req.end_date, req.bbox
+    )
     if isinstance(result, str) and result.startswith("Error"):
         raise HTTPException(status_code=400, detail=result)
     return {"tile_url": result}
