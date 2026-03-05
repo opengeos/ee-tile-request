@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 import ee
 import geemap
 import gradio as gr
@@ -211,6 +212,19 @@ class TileRequest(BaseModel):
     bbox: list[float] | None = None  # [west, south, east, north]
 
 
+class JRCWaterStatsRequest(BaseModel):
+    """Request model for JRC water statistics endpoint."""
+
+    bbox: list[float]  # [west, south, east, north]
+    scale: float | None = 30
+    start_date: str | None = "1984-03-16"
+    end_date: str | None = None  # defaults to today
+    start_month: int | None = 1
+    end_month: int | None = 12
+    frequency: str | None = "year"  # "month" or "year"
+    denominator: float | None = 10000.0  # m² to hectares
+
+
 @app.post("/tile")
 def get_tile_api(req: TileRequest):
     result = get_tile(
@@ -219,6 +233,126 @@ def get_tile_api(req: TileRequest):
     if isinstance(result, str) and result.startswith("Error"):
         raise HTTPException(status_code=400, detail=result)
     return {"tile_url": result}
+
+
+@app.post("/jrc-water-stats")
+def get_jrc_water_stats(req: JRCWaterStatsRequest):
+    """Compute JRC monthly water history and water occurrence statistics.
+
+    Args:
+        req: Request with bbox, scale, date range, month range, and frequency.
+
+    Returns:
+        dict: Monthly history data and water occurrence statistics.
+    """
+    try:
+        if len(req.bbox) != 4:
+            raise ValueError(
+                "bbox must be a list of 4 values: [west, south, east, north]"
+            )
+        if req.frequency not in ("month", "year"):
+            raise ValueError("frequency must be 'month' or 'year'")
+
+        region = ee.Geometry.BBox(*req.bbox)
+        end_date = req.end_date or datetime.date.today().strftime("%Y-%m-%d")
+
+        # Compute monthly water history from JRC MonthlyHistory
+        collection = ee.ImageCollection("JRC/GSW1_4/MonthlyHistory")
+        images = (
+            collection.filterDate(req.start_date, end_date)
+            .filter(ee.Filter.calendarRange(req.start_month, req.end_month, "month"))
+            .map(lambda img: img.eq(2).selfMask())
+        )
+
+        def cal_area(img):
+            pixel_area = img.multiply(ee.Image.pixelArea()).divide(req.denominator)
+            img_area = pixel_area.reduceRegion(
+                geometry=region,
+                reducer=ee.Reducer.sum(),
+                scale=req.scale,
+                maxPixels=1e12,
+                bestEffort=True,
+            )
+            return img.set({"area": img_area})
+
+        areas = images.map(cal_area)
+        stats_list = areas.aggregate_array("area").getInfo()
+        values = [item["water"] for item in stats_list]
+        labels = areas.aggregate_array("system:index").getInfo()
+
+        if req.frequency == "month":
+            history_data = [
+                {"Month": label, "Area": area} for label, area in zip(labels, values)
+            ]
+        else:
+            # Group by year and compute mean
+            year_areas = {}
+            for label, area in zip(labels, values):
+                year = label[:4]
+                year_areas.setdefault(year, []).append(area)
+            history_data = [
+                {"Year": year, "Area": sum(areas) / len(areas)}
+                for year, areas in sorted(year_areas.items())
+            ]
+
+        # Compute water occurrence statistics
+        occurrence = ee.Image("JRC/GSW1_4/GlobalSurfaceWater").select("occurrence")
+        stats = occurrence.reduceRegion(
+            reducer=ee.Reducer.mean()
+            .combine(ee.Reducer.min(), sharedInputs=True)
+            .combine(ee.Reducer.max(), sharedInputs=True)
+            .combine(ee.Reducer.stdDev(), sharedInputs=True),
+            geometry=region,
+            scale=req.scale,
+            maxPixels=1e12,
+            bestEffort=True,
+        ).getInfo()
+
+        # Compute occurrence histogram (10 bins from 0 to 100)
+        hist_result = occurrence.reduceRegion(
+            reducer=ee.Reducer.fixedHistogram(0, 100, 10),
+            geometry=region,
+            scale=req.scale,
+            maxPixels=1e12,
+            bestEffort=True,
+        ).getInfo()
+
+        # Parse histogram result
+        histogram = {"bin_edges": [], "counts": []}
+        if hist_result and "occurrence" in hist_result:
+            hist_list = hist_result["occurrence"]
+            bin_edges = [row[0] for row in hist_list]
+            bin_edges.append(hist_list[-1][0] + 10)  # add right edge
+            counts = [row[1] for row in hist_list]
+            histogram = {"bin_edges": bin_edges, "counts": counts}
+
+        return {
+            "monthly_history": {
+                "frequency": req.frequency,
+                "unit": "hectares",
+                "data": history_data,
+            },
+            "water_occurrence": {
+                "stats": {
+                    "mean": stats.get("occurrence_mean"),
+                    "min": stats.get("occurrence_min"),
+                    "max": stats.get("occurrence_max"),
+                    "stdDev": stats.get("occurrence_stdDev"),
+                },
+                "histogram": histogram,
+            },
+            "parameters": {
+                "bbox": req.bbox,
+                "scale": req.scale,
+                "start_date": req.start_date,
+                "end_date": end_date,
+                "start_month": req.start_month,
+                "end_month": req.end_month,
+                "frequency": req.frequency,
+            },
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ---- Gradio UI ----

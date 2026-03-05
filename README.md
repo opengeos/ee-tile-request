@@ -67,15 +67,16 @@ docker run -p 7860:7860 -e EARTHENGINE_TOKEN="your_token" ee-tile-request
 
 - **Web UI**: http://localhost:7860
 - **API Documentation**: http://localhost:7860/docs
-- **API Endpoint**: POST http://localhost:7860/tile
+- **Tile Endpoint**: POST http://localhost:7860/tile
+- **JRC Water Stats Endpoint**: POST http://localhost:7860/jrc-water-stats
 
-## API Usage
+## Tile URL API
 
-### Endpoint
+### Tile Endpoint
 
 `POST /tile`
 
-### Request Parameters
+### Tile Request Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -159,13 +160,86 @@ curl -X POST "http://localhost:7860/tile" \
   }'
 ```
 
-### Response
+### Tile Response
 
 ```json
 {
   "tile_url": "https://earthengine.googleapis.com/v1/projects/.../maps/.../tiles/{z}/{x}/{y}"
 }
 ```
+
+## JRC Water Statistics API
+
+### JRC Endpoint
+
+`POST /jrc-water-stats`
+
+Computes JRC monthly water history and water occurrence statistics for a given bounding box and scale. Returns JSON data suitable for creating plots.
+
+### JRC Request Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `bbox` | array | Yes | — | Bounding box [west, south, east, north] in degrees |
+| `scale` | number | No | 30 | Scale in meters for computation |
+| `start_date` | string | No | "1984-03-16" | Start date (format: "YYYY-MM-DD") |
+| `end_date` | string | No | today | End date (format: "YYYY-MM-DD") |
+| `start_month` | integer | No | 1 | Start month for calendar filtering (1-12) |
+| `end_month` | integer | No | 12 | End month for calendar filtering (1-12) |
+| `frequency` | string | No | "year" | Aggregation frequency: "month" or "year" |
+| `denominator` | number | No | 10000 | Area unit conversion (10000 = hectares) |
+
+### Example
+
+```bash
+curl -X POST "http://localhost:7860/jrc-water-stats" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bbox": [-90.5, 29.5, -90.0, 30.0],
+    "scale": 30,
+    "start_month": 5,
+    "end_month": 10,
+    "frequency": "year"
+  }'
+```
+
+### JRC Response
+
+```json
+{
+  "monthly_history": {
+    "frequency": "year",
+    "unit": "hectares",
+    "data": [
+      {"Year": "1984", "Area": 123.45},
+      {"Year": "1985", "Area": 130.20}
+    ]
+  },
+  "water_occurrence": {
+    "stats": {
+      "mean": 45.2,
+      "min": 0,
+      "max": 100,
+      "stdDev": 28.3
+    },
+    "histogram": {
+      "bin_edges": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+      "counts": [1500, 200, 150, 100, 80, 60, 50, 40, 30, 300]
+    }
+  },
+  "parameters": {
+    "bbox": [-90.5, 29.5, -90.0, 30.0],
+    "scale": 30,
+    "start_date": "1984-03-16",
+    "end_date": "2026-03-05",
+    "start_month": 5,
+    "end_month": 10,
+    "frequency": "year"
+  }
+}
+```
+
+When `frequency` is `"month"`, the `data` array contains `{"Month": "Jan", "Area": ...}` entries instead of `Year`.
 
 ### Using with Web Mapping Libraries
 
