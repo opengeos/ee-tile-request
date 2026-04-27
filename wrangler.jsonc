@@ -9,7 +9,7 @@
       "class_name": "EeTileContainer",
       "image": "./Dockerfile",
       "max_instances": 3,
-      "instance_type": "standard",
+      "instance_type": "standard-1",
       "name": "ee-tile-container"
     }
   ],
