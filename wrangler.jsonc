@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ee-tile-request",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-04-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "containers": [
+    {
+      "class_name": "EeTileContainer",
+      "image": "./Dockerfile",
+      "max_instances": 3,
+      "instance_type": "standard",
+      "name": "ee-tile-container"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "EeTileContainer",
+        "name": "EE_TILE_CONTAINER"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["EeTileContainer"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

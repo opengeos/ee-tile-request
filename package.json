@@ -1,0 +1,14 @@
+{
+  "name": "ee-tile-request-worker",
+  "private": true,
+  "description": "Cloudflare Worker that fronts the ee-tile-request container.",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.0.27",
+    "wrangler": "^4.0.0"
+  }
+}
