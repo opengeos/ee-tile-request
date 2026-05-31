@@ -4,7 +4,7 @@ emoji: 😻
 colorFrom: pink
 colorTo: gray
 sdk: docker
-app_port: 7860
+app_port: 7865
 pinned: false
 license: mit
 short_description: Earth Engine Tile URL Generator
@@ -53,22 +53,22 @@ export EARTHENGINE_TOKEN="your_token_here"
 ### Local Development
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 7860 --reload
+uvicorn main:app --host 0.0.0.0 --port 7865 --reload
 ```
 
 ### Docker
 
 ```bash
 docker build -t ee-tile-request .
-docker run -p 7860:7860 -e EARTHENGINE_TOKEN="your_token" ee-tile-request
+docker run -p 7865:7865 -e EARTHENGINE_TOKEN="your_token" ee-tile-request
 ```
 
 ### Access Points
 
-- **Web UI**: http://localhost:7860
-- **API Documentation**: http://localhost:7860/docs
-- **Tile Endpoint**: POST http://localhost:7860/tile
-- **JRC Water Stats Endpoint**: POST http://localhost:7860/jrc-water-stats
+- **Web UI**: http://localhost:7865
+- **API Documentation**: http://localhost:7865/docs
+- **Tile Endpoint**: POST http://localhost:7865/tile
+- **JRC Water Stats Endpoint**: POST http://localhost:7865/jrc-water-stats
 
 ## Tile URL API
 
@@ -91,7 +91,7 @@ docker run -p 7860:7860 -e EARTHENGINE_TOKEN="your_token" ee-tile-request
 #### Basic Request
 
 ```bash
-curl -X POST "http://localhost:7860/tile" \
+curl -X POST "http://localhost:7865/tile" \
   -H "Content-Type: application/json" \
   -d '{
     "asset_id": "USGS/SRTMGL1_003",
@@ -108,7 +108,7 @@ curl -X POST "http://localhost:7860/tile" \
 Filter Sentinel-2 imagery to a specific time period:
 
 ```bash
-curl -X POST "http://localhost:7860/tile" \
+curl -X POST "http://localhost:7865/tile" \
   -H "Content-Type: application/json" \
   -d '{
     "asset_id": "COPERNICUS/S2_SR",
@@ -127,7 +127,7 @@ curl -X POST "http://localhost:7860/tile" \
 Filter to San Francisco Bay Area:
 
 ```bash
-curl -X POST "http://localhost:7860/tile" \
+curl -X POST "http://localhost:7865/tile" \
   -H "Content-Type: application/json" \
   -d '{
     "asset_id": "COPERNICUS/S2_SR",
@@ -145,7 +145,7 @@ curl -X POST "http://localhost:7860/tile" \
 Date range and spatial filtering together:
 
 ```bash
-curl -X POST "http://localhost:7860/tile" \
+curl -X POST "http://localhost:7865/tile" \
   -H "Content-Type: application/json" \
   -d '{
     "asset_id": "COPERNICUS/S2_SR",
@@ -192,7 +192,7 @@ Computes JRC monthly water history and water occurrence statistics for a given b
 ### Example
 
 ```bash
-curl -X POST "http://localhost:7860/jrc-water-stats" \
+curl -X POST "http://localhost:7865/jrc-water-stats" \
   -H "Content-Type: application/json" \
   -d '{
     "bbox": [-90.5, 29.5, -90.0, 30.0],
@@ -271,7 +271,7 @@ map.addLayer({
 
 ## Web UI (Gradio)
 
-Access the web interface at http://localhost:7860 to:
+Access the web interface at http://localhost:7865 to:
 - Enter Earth Engine asset IDs
 - Specify visualization parameters as JSON
 - Get tile URLs instantly
