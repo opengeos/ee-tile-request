@@ -33,17 +33,20 @@ A FastAPI service that generates tile URLs for Google Earth Engine assets, suita
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd ee-tile-request
 ```
 
 2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 3. Set your Earth Engine token:
+
 ```bash
 export EARTHENGINE_TOKEN="your_token_here"
 ```
@@ -60,7 +63,7 @@ uvicorn main:app --host 0.0.0.0 --port 7865 --reload
 
 ```bash
 docker build -t ee-tile-request .
-docker run -p 7865:7865 -e EARTHENGINE_TOKEN="your_token" ee-tile-request
+docker run -p 7865:7865 -e EE_SERVICE_ACCOUNT ee-tile-request
 ```
 
 ### Access Points
@@ -78,13 +81,13 @@ docker run -p 7865:7865 -e EARTHENGINE_TOKEN="your_token" ee-tile-request
 
 ### Tile Request Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `asset_id` | string | Yes | Earth Engine asset ID (e.g., "USGS/SRTMGL1_003") or ee expression |
-| `vis_params` | object | No | Visualization parameters (min, max, palette, bands, etc.) |
-| `start_date` | string | No | Start date for filtering (format: "YYYY-MM-DD") |
-| `end_date` | string | No | End date for filtering (format: "YYYY-MM-DD") |
-| `bbox` | array | No | Bounding box [west, south, east, north] in degrees |
+| Parameter    | Type   | Required | Description                                                       |
+| ------------ | ------ | -------- | ----------------------------------------------------------------- |
+| `asset_id`   | string | Yes      | Earth Engine asset ID (e.g., "USGS/SRTMGL1_003") or ee expression |
+| `vis_params` | object | No       | Visualization parameters (min, max, palette, bands, etc.)         |
+| `start_date` | string | No       | Start date for filtering (format: "YYYY-MM-DD")                   |
+| `end_date`   | string | No       | End date for filtering (format: "YYYY-MM-DD")                     |
+| `bbox`       | array  | No       | Bounding box [west, south, east, north] in degrees                |
 
 ### Examples
 
@@ -178,16 +181,16 @@ Computes JRC monthly water history and water occurrence statistics for a given b
 
 ### JRC Request Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `bbox` | array | Yes | — | Bounding box [west, south, east, north] in degrees |
-| `scale` | number | No | 30 | Scale in meters for computation |
-| `start_date` | string | No | "1984-03-16" | Start date (format: "YYYY-MM-DD") |
-| `end_date` | string | No | today | End date (format: "YYYY-MM-DD") |
-| `start_month` | integer | No | 1 | Start month for calendar filtering (1-12) |
-| `end_month` | integer | No | 12 | End month for calendar filtering (1-12) |
-| `frequency` | string | No | "year" | Aggregation frequency: "month" or "year" |
-| `denominator` | number | No | 10000 | Area unit conversion (10000 = hectares) |
+| Parameter     | Type    | Required | Default      | Description                                        |
+| ------------- | ------- | -------- | ------------ | -------------------------------------------------- |
+| `bbox`        | array   | Yes      | —            | Bounding box [west, south, east, north] in degrees |
+| `scale`       | number  | No       | 30           | Scale in meters for computation                    |
+| `start_date`  | string  | No       | "1984-03-16" | Start date (format: "YYYY-MM-DD")                  |
+| `end_date`    | string  | No       | today        | End date (format: "YYYY-MM-DD")                    |
+| `start_month` | integer | No       | 1            | Start month for calendar filtering (1-12)          |
+| `end_month`   | integer | No       | 12           | End month for calendar filtering (1-12)            |
+| `frequency`   | string  | No       | "year"       | Aggregation frequency: "month" or "year"           |
+| `denominator` | number  | No       | 10000        | Area unit conversion (10000 = hectares)            |
 
 ### Example
 
@@ -211,8 +214,8 @@ curl -X POST "http://localhost:7865/jrc-water-stats" \
     "frequency": "year",
     "unit": "hectares",
     "data": [
-      {"Year": "1984", "Area": 123.45},
-      {"Year": "1985", "Area": 130.20}
+      { "Year": "1984", "Area": 123.45 },
+      { "Year": "1985", "Area": 130.2 }
     ]
   },
   "water_occurrence": {
@@ -248,30 +251,31 @@ When `frequency` is `"month"`, the `data` array contains `{"Month": "Jan", "Area
 ```javascript
 const tileUrl = response.tile_url;
 L.tileLayer(tileUrl, {
-  attribution: 'Google Earth Engine',
-  maxZoom: 18
+  attribution: "Google Earth Engine",
+  maxZoom: 18,
 }).addTo(map);
 ```
 
 #### Mapbox GL JS
 
 ```javascript
-map.addSource('ee-tiles', {
-  'type': 'raster',
-  'tiles': [response.tile_url],
-  'tileSize': 256
+map.addSource("ee-tiles", {
+  type: "raster",
+  tiles: [response.tile_url],
+  tileSize: 256,
 });
 
 map.addLayer({
-  'id': 'ee-layer',
-  'type': 'raster',
-  'source': 'ee-tiles'
+  id: "ee-layer",
+  type: "raster",
+  source: "ee-tiles",
 });
 ```
 
 ## Web UI (Gradio)
 
 Access the web interface at http://localhost:7865 to:
+
 - Enter Earth Engine asset IDs
 - Specify visualization parameters as JSON
 - Get tile URLs instantly
