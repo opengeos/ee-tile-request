@@ -1,0 +1,10 @@
+.git
+.gitignore
+.pre-commit-config.yaml
+.claude
+__pycache__
+*.py[cod]
+*.ipynb
+.env
+*.pem
+*.key
