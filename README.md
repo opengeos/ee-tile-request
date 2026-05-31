@@ -20,6 +20,7 @@ A FastAPI service that generates tile URLs for Google Earth Engine assets, suita
 - Optional date range filtering for ImageCollections
 - Optional bounding box filtering for spatial subsetting
 - Customizable visualization parameters
+- Validates public API inputs before Earth Engine requests
 - REST API and web UI (Gradio)
 - FastAPI auto-generated documentation
 
@@ -51,6 +52,14 @@ pip install -r requirements.txt
 export EARTHENGINE_TOKEN="your_token_here"
 ```
 
+Optional deployment settings:
+
+```bash
+export ALLOWED_ORIGINS="https://ee.opengeos.org"
+export ALLOWED_HOSTS="ee.opengeos.org,localhost,127.0.0.1"
+export MAX_REQUEST_BYTES="1048576"
+```
+
 ## Running the App
 
 ### Local Development
@@ -63,12 +72,13 @@ uvicorn main:app --host 0.0.0.0 --port 7865 --reload
 
 ```bash
 docker build -t ee-tile-request .
-docker run -p 7865:7865 -e EE_SERVICE_ACCOUNT ee-tile-request
+docker run -p 7865:7865 -e EE_SERVICE_ACCOUNT="$EE_SERVICE_ACCOUNT" ee-tile-request
 ```
 
 ### Access Points
 
 - **Web UI**: http://localhost:7865
+- **Cloudflare Tunnel Web UI**: https://ee.opengeos.org
 - **API Documentation**: http://localhost:7865/docs
 - **Tile Endpoint**: POST http://localhost:7865/tile
 - **JRC Water Stats Endpoint**: POST http://localhost:7865/jrc-water-stats
@@ -83,7 +93,7 @@ docker run -p 7865:7865 -e EE_SERVICE_ACCOUNT ee-tile-request
 
 | Parameter    | Type   | Required | Description                                                       |
 | ------------ | ------ | -------- | ----------------------------------------------------------------- |
-| `asset_id`   | string | Yes      | Earth Engine asset ID (e.g., "USGS/SRTMGL1_003") or ee expression |
+| `asset_id`   | string | Yes      | Earth Engine asset ID or supported ee constructor expression       |
 | `vis_params` | object | No       | Visualization parameters (min, max, palette, bands, etc.)         |
 | `start_date` | string | No       | Start date for filtering (format: "YYYY-MM-DD")                   |
 | `end_date`   | string | No       | End date for filtering (format: "YYYY-MM-DD")                     |
@@ -183,7 +193,7 @@ Computes JRC monthly water history and water occurrence statistics for a given b
 
 | Parameter     | Type    | Required | Default      | Description                                        |
 | ------------- | ------- | -------- | ------------ | -------------------------------------------------- |
-| `bbox`        | array   | Yes      | —            | Bounding box [west, south, east, north] in degrees |
+| `bbox`        | array   | Yes      | N/A          | Bounding box [west, south, east, north] in degrees |
 | `scale`       | number  | No       | 30           | Scale in meters for computation                    |
 | `start_date`  | string  | No       | "1984-03-16" | Start date (format: "YYYY-MM-DD")                  |
 | `end_date`    | string  | No       | today        | End date (format: "YYYY-MM-DD")                    |
@@ -291,6 +301,10 @@ Access the web interface at http://localhost:7865 to:
 
 - Date filtering only works with ImageCollections
 - Bounding box format: `[west, south, east, north]` in WGS84 degrees
+- `asset_id` can be a literal Earth Engine asset ID or one of `ee.Image("...")`, `ee.ImageCollection("...")`, or `ee.FeatureCollection("...")`.
+- Arbitrary Python expressions are rejected.
+- Browser CORS is limited to `ALLOWED_ORIGINS`; set it to the domains that should call the API.
+- Host headers are limited to `ALLOWED_HOSTS`; include `ee.opengeos.org` when serving through the Cloudflare tunnel.
 - All filtering parameters are optional and backward compatible
 - Check the FastAPI docs at `/docs` for interactive API testing
 
